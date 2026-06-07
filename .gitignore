@@ -1,0 +1,17 @@
+# Node.js
+node_modules/
+npm-debug.log
+
+# Backend Uploads and Env
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/.env
+backend/dist/
+
+# Frontend build output
+frontend/dist/
+frontend/node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
