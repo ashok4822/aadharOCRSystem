@@ -1,70 +1,60 @@
-import { Request, Response } from 'express';
-import { ProcessAadhaarOCR } from '../../application/usecases/ProcessAadhaarOCR';
-import { GetAadhaarHistory } from '../../application/usecases/GetAadhaarHistory';
+import { Request, Response, NextFunction } from 'express';
+import { IProcessAadhaarOCR } from '../../application/usecases/IProcessAadhaarOCR';
+import { IGetAadhaarHistory } from '../../application/usecases/IGetAadhaarHistory';
 import { AadhaarMapper } from '../../application/mappers/AadhaarMapper';
+import { AppError } from '../../infrastructure/errors/AppError';
+import { HttpStatus } from '../../config/httpStatus';
+import { ServerMessages } from '../../config/messages';
 
 export class AadhaarController {
   constructor(
-    private readonly processOCRUseCase: ProcessAadhaarOCR,
-    private readonly getHistoryUseCase: GetAadhaarHistory
+    private readonly processOCRUseCase: IProcessAadhaarOCR,
+    private readonly getHistoryUseCase: IGetAadhaarHistory
   ) {}
 
-  public uploadAndProcess = async (req: Request, res: Response): Promise<void> => {
+  public uploadAndProcess = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       
       if (!files || !files['frontImage'] || !files['backImage']) {
-        res.status(400).json({
-          status: false,
-          message: 'Both frontImage and backImage files are required.',
-        });
-        return;
+        throw new AppError(ServerMessages.ERROR.FILES_REQUIRED, HttpStatus.BAD_REQUEST);
       }
 
       const frontFile = files['frontImage'][0];
       const backFile = files['backImage'][0];
 
-      // Call the usecase with path for OCR and filename for DB storage
+      // Call the usecase with buffer for OCR and mimetype for DB storage as Base64
       const aadhaar = await this.processOCRUseCase.execute(
-        frontFile.path,
-        backFile.path,
-        frontFile.filename,
-        backFile.filename
+        frontFile.buffer,
+        backFile.buffer,
+        frontFile.mimetype,
+        backFile.mimetype
       );
       const dto = AadhaarMapper.toDTO(aadhaar);
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         status: true,
-        message: 'Parsing Successful',
+        message: ServerMessages.SUCCESS.PARSING_SUCCESSFUL,
         data: dto,
       });
     } catch (error) {
-      console.error('Controller processing error:', error);
-      res.status(500).json({
-        status: false,
-        message: 'Internal Server Error during OCR processing.',
-        error: (error as Error).message,
-      });
+      next(error);
     }
   };
 
-  public getHistory = async (req: Request, res: Response): Promise<void> => {
+  public getHistory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const history = await this.getHistoryUseCase.execute();
       const dtos = history.map(item => AadhaarMapper.toDTO(item));
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         status: true,
-        message: 'Fetched history successfully',
+        message: ServerMessages.SUCCESS.FETCHED_HISTORY,
         data: dtos,
       });
     } catch (error) {
-      console.error('Controller history error:', error);
-      res.status(500).json({
-        status: false,
-        message: 'Internal Server Error during history retrieval.',
-        error: (error as Error).message,
-      });
+      next(error);
     }
   };
 }
+
