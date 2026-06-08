@@ -115,24 +115,31 @@ export class ProcessAadhaarOCR implements IProcessAadhaarOCR {
       .filter((l) => l.length >= 3);
 
     for (const line of lines) {
+      // Strip leading non-alpha characters (OCR noise like numbers, symbols, brackets)
+      const cleaned = line.replace(/^[^A-Za-z]+/, '').trim();
+      if (cleaned.length < 3) continue;
+
       // Must contain ONLY Latin letters, spaces, dots, hyphens, apostrophes
-      if (!/^[A-Za-z][A-Za-z\s.\-']+$/.test(line)) continue;
+      if (!/^[A-Za-z][A-Za-z\s.\-']*$/.test(cleaned)) continue;
 
       // Skip boilerplate
-      if (skipPatterns.some((p) => p.test(line))) continue;
+      if (skipPatterns.some((p) => p.test(cleaned))) continue;
 
       // Must have between 1 and 6 words
-      const words = line.trim().split(/\s+/).filter((w) => w.length > 0);
+      const words = cleaned.split(/\s+/).filter((w) => w.length > 0);
       if (words.length < 1 || words.length > 6) continue;
 
-      // Each word must be at least 2 characters
-      if (words.some((w) => w.length < 2)) continue;
+      // Each word must be at least 1 character (allows single-letter initials like "K")
+      if (words.some((w) => w.length < 1)) continue;
 
-      // At least one word must start with an uppercase letter (names are capitalised)
-      if (!words.some((w) => /^[A-Z]/.test(w))) continue;
+      // ALL words must start with an uppercase letter — rejects garbled fragments like "HR wa"
+      if (!words.every((w) => /^[A-Z]/.test(w))) continue;
 
-      console.log(`[Local Name Extractor] Candidate line: "${line}"`);
-      return line.trim();
+      // At least one word must be 2+ chars (avoids single-letter-only lines)
+      if (!words.some((w) => w.length >= 2)) continue;
+
+      console.log(`[Local Name Extractor] Candidate line: "${cleaned}"`);
+      return cleaned;
     }
 
     return 'Not Found';
