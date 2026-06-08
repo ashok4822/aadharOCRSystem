@@ -1,4 +1,4 @@
 export interface IOCRService {
-  performOCR(filePath: string): Promise<string>;
+  performOCR(file: string | Buffer): Promise<string>;
 }
 export default IOCRService;
