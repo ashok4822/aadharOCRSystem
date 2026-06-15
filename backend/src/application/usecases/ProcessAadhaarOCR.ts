@@ -6,9 +6,9 @@ import { IProcessAadhaarOCR } from './IProcessAadhaarOCR';
 
 export class ProcessAadhaarOCR implements IProcessAadhaarOCR {
   constructor(
-    private readonly ocrService: IOCRService,
-    private readonly repository: IAadhaarRepository,
-    private readonly parserService: IAadhaarParser
+    private readonly _ocrService: IOCRService,
+    private readonly _repository: IAadhaarRepository,
+    private readonly _parserService: IAadhaarParser
   ) {}
 
   public async execute(
@@ -17,11 +17,11 @@ export class ProcessAadhaarOCR implements IProcessAadhaarOCR {
     frontMimeType: string,
     backMimeType: string
   ): Promise<Aadhaar> {
-    const rawTextFront = await this.ocrService.performOCR(frontImage);
-    const rawTextBack  = await this.ocrService.performOCR(backImage);
+    const rawTextFront = await this._ocrService.performOCR(frontImage);
+    const rawTextBack  = await this._ocrService.performOCR(backImage);
 
     // 1. Redact the Aadhaar Number locally first to preserve PII data privacy
-    const { redactedFront, redactedBack, aadhaarNumber } = this.redactAadhaar(
+    const { redactedFront, redactedBack, aadhaarNumber } = this._redactAadhaar(
       rawTextFront,
       rawTextBack
     );
@@ -29,7 +29,7 @@ export class ProcessAadhaarOCR implements IProcessAadhaarOCR {
     console.log(`[Local Redactor] Extracted Aadhaar Number: ${aadhaarNumber !== 'Not Found' ? 'Found (Redacted locally)' : 'Not Found'}`);
 
     // 2. Pass the redacted text to the external LLM parser
-    const parsedData = await this.parserService.parseText(redactedFront, redactedBack);
+    const parsedData = await this._parserService.parseText(redactedFront, redactedBack);
 
     // 3. Merge the locally extracted Aadhaar number back into the parsed details
     if (aadhaarNumber !== 'Not Found') {
@@ -38,14 +38,14 @@ export class ProcessAadhaarOCR implements IProcessAadhaarOCR {
 
     // 4. If Groq could not determine the name, fall back to local extraction
     if (!parsedData.name || parsedData.name === 'Not Found') {
-      const localName = this.extractNameFromOCR(rawTextFront);
+      const localName = this._extractNameFromOCR(rawTextFront);
       console.log(`[Local Name Extractor] Fallback name: "${localName}"`);
       parsedData.name = localName;
     }
 
     // 5. If Groq could not determine the gender, fall back to local extraction/inference
     if (!parsedData.gender || parsedData.gender === 'Not Found') {
-      const localGender = this.extractGenderFromOCR(rawTextFront, rawTextBack);
+      const localGender = this._extractGenderFromOCR(rawTextFront, rawTextBack);
       console.log(`[Local Gender Extractor] Fallback gender: "${localGender}"`);
       parsedData.gender = localGender;
     }
@@ -67,7 +67,7 @@ export class ProcessAadhaarOCR implements IProcessAadhaarOCR {
       rawTextBack
     );
 
-    return this.repository.save(aadhaar);
+    return this._repository.save(aadhaar);
   }
 
   /**
@@ -83,7 +83,7 @@ export class ProcessAadhaarOCR implements IProcessAadhaarOCR {
    *   • Every word starts with an uppercase letter (names are printed in title
    *     case or ALL CAPS on the card)
    */
-  private extractNameFromOCR(frontText: string): string {
+  private _extractNameFromOCR(frontText: string): string {
     // Boilerplate lines to skip (case-insensitive)
     const skipPatterns: RegExp[] = [
       /government\s+of\s+india/i,
@@ -149,7 +149,7 @@ export class ProcessAadhaarOCR implements IProcessAadhaarOCR {
    * Helper to identify, extract, and replace all instances of the 12-digit Aadhaar number
    * with a placeholder ([REDACTED_AADHAAR_NUMBER]) from both front and back text.
    */
-  private redactAadhaar(
+  private _redactAadhaar(
     frontText: string,
     backText: string
   ): { redactedFront: string; redactedBack: string; aadhaarNumber: string } {
@@ -205,7 +205,7 @@ export class ProcessAadhaarOCR implements IProcessAadhaarOCR {
   /**
    * Deterministically extract or infer gender from OCR texts if not parsed successfully by the LLM.
    */
-  private extractGenderFromOCR(frontText: string, backText: string): string {
+  private _extractGenderFromOCR(frontText: string, backText: string): string {
     const combinedText = (frontText + ' ' + backText).toLowerCase();
 
     // 1. Look for explicit mentions of MALE / FEMALE / TRANSGENDER first

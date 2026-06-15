@@ -100,7 +100,7 @@ ${backText}
         aadhaarNumber: parsedJson.aadhaarNumber || 'Not Found',
         name: parsedJson.name || 'Not Found',
         dob: parsedJson.dob || 'Not Found',
-        gender: this.normalizeGender(parsedJson.gender),
+        gender: this._normalizeGender(parsedJson.gender),
         address: parsedJson.address || 'Not Found',
         pincode: parsedJson.pincode || 'Not Found',
       };
@@ -115,7 +115,7 @@ ${backText}
    * the three canonical values: MALE, FEMALE, or TRANSGENDER.
    * Falls back to "Not Found" if the value is missing or unrecognisable.
    */
-  private normalizeGender(raw: string | undefined | null): string {
+  private _normalizeGender(raw: string | undefined | null): string {
     if (!raw) return 'Not Found';
 
     // Remove all non-alphabetic characters and lowercase for matching

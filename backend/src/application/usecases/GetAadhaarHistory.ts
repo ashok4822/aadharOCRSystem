@@ -3,9 +3,9 @@ import { IAadhaarRepository } from '../../domain/repositories/IAadhaarRepository
 import { IGetAadhaarHistory } from './IGetAadhaarHistory';
 
 export class GetAadhaarHistory implements IGetAadhaarHistory {
-  constructor(private readonly repository: IAadhaarRepository) {}
+  constructor(private readonly _repository: IAadhaarRepository) {}
 
   public async execute(): Promise<Aadhaar[]> {
-    return this.repository.findAll();
+    return this._repository.findAll();
   }
 }

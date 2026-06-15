@@ -9,8 +9,8 @@ import { asyncHandler } from '../../infrastructure/middleware/asyncHandler';
 
 export class AadhaarController {
   constructor(
-    private readonly processOCRUseCase: IProcessAadhaarOCR,
-    private readonly getHistoryUseCase: IGetAadhaarHistory
+    private readonly _processOCRUseCase: IProcessAadhaarOCR,
+    private readonly _getHistoryUseCase: IGetAadhaarHistory
   ) {}
 
   public uploadAndProcess = asyncHandler(async (req: Request, res: Response): Promise<void> => {
@@ -24,7 +24,7 @@ export class AadhaarController {
     const backFile = files['backImage'][0];
 
     // Call the usecase with buffer for OCR and mimetype for DB storage as Base64
-    const aadhaar = await this.processOCRUseCase.execute(
+    const aadhaar = await this._processOCRUseCase.execute(
       frontFile.buffer,
       backFile.buffer,
       frontFile.mimetype,
@@ -40,7 +40,7 @@ export class AadhaarController {
   });
 
   public getHistory = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const history = await this.getHistoryUseCase.execute();
+    const history = await this._getHistoryUseCase.execute();
     const dtos = history.map(item => AadhaarMapper.toDTO(item));
 
     res.status(HttpStatus.OK).json({
