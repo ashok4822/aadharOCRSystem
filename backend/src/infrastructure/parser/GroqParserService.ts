@@ -106,7 +106,7 @@ ${backText}
       };
     } catch (error) {
       console.error('Failed to parse Aadhaar using Groq:', error);
-      throw new Error(`Groq parsing failed: ${(error as Error).message}`);
+      throw new Error(`Groq parsing failed: ${(error as Error).message}`, { cause: error });
     }
   }
 

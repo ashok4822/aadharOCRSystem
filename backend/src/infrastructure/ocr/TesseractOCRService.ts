@@ -16,7 +16,7 @@ export class TesseractOCRService implements IOCRService {
       return text;
     } catch (error) {
       console.error(`OCR failed for ${Buffer.isBuffer(file) ? 'Buffer' : file}`, error);
-      throw new Error(ServerMessages.ERROR.OCR_PROCESSING_FAILED((error as Error).message));
+      throw new Error(ServerMessages.ERROR.OCR_PROCESSING_FAILED((error as Error).message), { cause: error });
     }
   }
 }

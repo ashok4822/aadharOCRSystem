@@ -1,11 +1,12 @@
 import multer from 'multer';
 import path from 'path';
+import { Request } from 'express';
 import { config } from '../../config/config';
 import { ServerMessages } from '../../config/messages';
 
 const storage = multer.memoryStorage();
 
-const fileFilter = (req: any, file: Express.Multer.File, cb: any) => {
+const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const allowedExtensions = /jpeg|jpg|png|webp/i;
   const mimetype = allowedExtensions.test(file.mimetype);
   const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
