@@ -168,14 +168,14 @@ export class ProcessAadhaarOCR implements IProcessAadhaarOCR {
       const frontMatch = frontText.match(pat);
       if (frontMatch) {
         const matchedStr = frontMatch[1];
-        aadhaarNumber = matchedStr.replace(/[\s\-]/g, '');
+        aadhaarNumber = matchedStr.replace(/[\s-]/g, '');
         break;
       }
 
       const backMatch = backText.match(pat);
       if (backMatch) {
         const matchedStr = backMatch[1];
-        aadhaarNumber = matchedStr.replace(/[\s\-]/g, '');
+        aadhaarNumber = matchedStr.replace(/[\s-]/g, '');
         break;
       }
     }

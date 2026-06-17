@@ -1,15 +1,24 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useCallback } from 'react';
+import { aadhaarService } from './api/aadhaarService';
 import { Header } from './components/Header';
 import { UploadCard } from './components/UploadCard';
 import { ExtractedDataCard } from './components/ExtractedDataCard';
 import { HistoryLogs } from './components/HistoryLogs';
+import { useToast } from './components/useToast';
 import type { AadhaarData } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5000/api/aadhaar';
+// Safely extract an error message from an unknown catch value
+const getErrorMessage = (err: unknown, fallback: string): string => {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return fallback;
+};
+
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ?? 'http://localhost:5000';
 
 export default function App() {
+  const { showError, showSuccess } = useToast();
+
   // File upload states
   const [frontFile, setFrontFile] = useState<File | null>(null);
   const [backFile, setBackFile] = useState<File | null>(null);
@@ -25,22 +34,21 @@ export default function App() {
   // Collapsible section states
   const [showRawJSON, setShowRawJSON] = useState<boolean>(false);
 
-  const fetchHistory = async () => {
+  const fetchHistory = useCallback(async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/history`);
-      if (response.data && response.data.status) {
-        setHistory(response.data.data);
-      }
-    } catch (err) {
+      const data = await aadhaarService.getHistory();
+      setHistory(data);
+    } catch (err: unknown) {
       console.error('Failed to fetch OCR history:', err);
+      showError(getErrorMessage(err, 'Failed to retrieve OCR history logs.'));
     }
-  };
+  }, [showError]);
 
   // Fetch past OCR results on mount
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchHistory();
-  }, []);
+  }, [fetchHistory]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'front' | 'back') => {
     const file = e.target.files?.[0];
@@ -48,7 +56,9 @@ export default function App() {
 
     // Validate file type
     if (!file.type.match(/image\/(jpeg|jpg|png|webp)/)) {
-      setError('Please select a valid image file (PNG, JPG, JPEG, or WEBP).');
+      const msg = 'Please select a valid image file (PNG, JPG, JPEG, or WEBP).';
+      setError(msg);
+      showError(msg);
       return;
     }
 
@@ -76,7 +86,9 @@ export default function App() {
     if (!file) return;
 
     if (!file.type.match(/image\/(jpeg|jpg|png|webp)/)) {
-      setError('Please drop a valid image file (PNG, JPG, JPEG, or WEBP).');
+      const msg = 'Please drop a valid image file (PNG, JPG, JPEG, or WEBP).';
+      setError(msg);
+      showError(msg);
       return;
     }
 
@@ -96,7 +108,9 @@ export default function App() {
 
   const handleParse = async () => {
     if (!frontFile || !backFile) {
-      setError('Please upload both the front and back images of your Aadhaar card.');
+      const msg = 'Please upload both the front and back images of your Aadhaar card.';
+      setError(msg);
+      showError(msg);
       return;
     }
 
@@ -104,32 +118,16 @@ export default function App() {
     setError(null);
     setResult(null);
 
-    const formData = new FormData();
-    formData.append('frontImage', frontFile);
-    formData.append('backImage', backFile);
-
     try {
-      const response = await axios.post(`${API_BASE_URL}/ocr`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (response.data && response.data.status) {
-        setResult(response.data.data);
-        // Refresh past history logs
-        fetchHistory();
-      } else {
-        setError(response.data.message || 'An error occurred during parsing.');
-      }
-    } catch (err) {
+      const data = await aadhaarService.performOCR(frontFile, backFile);
+      setResult(data);
+      showSuccess('Aadhaar card parsed successfully!');
+      // Refresh past history logs
+      fetchHistory();
+    } catch (err: unknown) {
       console.error(err);
-      const errorResponse = (err as { response?: { data?: { message?: string; error?: string } } }).response;
-      setError(
-        errorResponse?.data?.message || 
-        errorResponse?.data?.error || 
-        'Failed to connect to backend server. Make sure the server is running.'
-      );
+      setError(getErrorMessage(err, 'Failed to connect to backend server. Make sure the server is running.'));
+      showError(getErrorMessage(err, 'Failed to connect to backend server.'));
     } finally {
       setLoading(false);
     }
